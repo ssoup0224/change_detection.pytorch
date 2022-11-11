@@ -30,7 +30,7 @@ class Epoch:
         s = ', '.join(str_logs)
         return s
 
-    def batch_update(self, x1, x2, y):
+    def batch_update(self, x1, y):
         raise NotImplementedError
 
     def on_epoch_start(self):
@@ -57,20 +57,20 @@ class Epoch:
         metrics_meters = {metric.__name__: AverageValueMeter() for metric in self.metrics}
 
         with tqdm(dataloader, desc=self.stage_name, file=sys.stdout, disable=not (self.verbose)) as iterator:
-            for (x1, x2, y, filename) in iterator:
+            for (x1, y, filename) in iterator:
 
                 assert y is not None or not evaluate, "When the label is None, the evaluation mode cannot be turned on."
 
                 if y is not None:
-                    x1, x2, y = self.check_tensor(x1, False), self.check_tensor(x2, False), \
+                    x1, y = self.check_tensor(x1, False), \
                                 self.check_tensor(y, True)
-                    x1, x2, y = x1.to(self.device), x2.to(self.device), y.to(self.device)
-                    y_pred = self.model.forward(x1, x2)
+                    x1, y = x1.to(self.device), y.to(self.device)
+                    y_pred = self.model.forward(x1)
                 else:
-                    x1, x2 = self.check_tensor(x1, False), self.check_tensor(x2, False)
-                    x1, x2 = x1.float(), x2.float()
-                    x1, x2 = x1.to(self.device), x2.to(self.device)
-                    y_pred = self.model.forward(x1, x2)
+                    x1 = self.check_tensor(x1, False)
+                    x1 = x1.float()
+                    x1 = x1.to(self.device)
+                    y_pred = self.model.forward(x1)
 
                 if evaluate:
                     # update metrics logs
@@ -111,12 +111,12 @@ class Epoch:
         metrics_meters = {metric.__name__: AverageValueMeter() for metric in self.metrics}
 
         with tqdm(dataloader, desc=self.stage_name, file=sys.stdout, disable=not (self.verbose)) as iterator:
-            for (x1, x2, y, filename) in iterator:
+            for (x1, y, filename) in iterator:
 
-                x1, x2, y = self.check_tensor(x1, False), self.check_tensor(x2, False), \
+                x1, y = self.check_tensor(x1, False), \
                             self.check_tensor(y, True)
-                x1, x2, y = x1.to(self.device), x2.to(self.device), y.to(self.device)
-                loss, y_pred = self.batch_update(x1, x2, y)
+                x1, y = x1.to(self.device), y.to(self.device)
+                loss, y_pred = self.batch_update(x1, y)
 
                 # update loss logs
                 loss_value = loss.detach().cpu().numpy()
@@ -154,9 +154,9 @@ class TrainEpoch(Epoch):
     def on_epoch_start(self):
         self.model.train()
 
-    def batch_update(self, x1, x2, y):
+    def batch_update(self, x1, y):
         self.optimizer.zero_grad()
-        prediction = self.model.forward(x1, x2)
+        prediction = self.model.forward(x1)
         loss = self.loss(prediction, y)
         loss.backward()
         self.optimizer.step()
@@ -178,8 +178,8 @@ class ValidEpoch(Epoch):
     def on_epoch_start(self):
         self.model.eval()
 
-    def batch_update(self, x1, x2, y):
+    def batch_update(self, x1, y):
         with torch.no_grad():
-            prediction = self.model.forward(x1, x2)
+            prediction = self.model.forward(x1)
             loss = self.loss(prediction, y)
         return loss, prediction
