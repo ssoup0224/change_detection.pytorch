@@ -53,7 +53,6 @@ class CustomDataset(Dataset):
     def __init__(self,
                  img_dir,
                  sub_dir_1='A',
-                 sub_dir_2='B',
                  ann_dir=None,
                  img_suffix='.jpg',
                  seg_map_suffix='.png',
@@ -72,7 +71,6 @@ class CustomDataset(Dataset):
         self.data_root = data_root
         self.test_mode = test_mode
         self.sub_dir_1 = sub_dir_1
-        self.sub_dir_2 = sub_dir_2
         self.size = size
         self.debug = debug
 
@@ -86,8 +84,7 @@ class CustomDataset(Dataset):
         # load annotations
         self.img_infos = self.load_infos(self.img_dir, self.img_suffix,
                                          self.seg_map_suffix, self.sub_dir_1,
-                                         self.sub_dir_2, self.ann_dir,
-                                         self.split)
+                                         self.ann_dir, self.split)
 
         # transform/augment data
         if self.transform is None:
@@ -99,8 +96,7 @@ class CustomDataset(Dataset):
             self.transform = A.Compose([t for t in self.transform if not isinstance(t, (A.Normalize, ToTensorV2,
                                                                                         ToTensorTest))])
 
-    def load_infos(self, img_dir, img_suffix, seg_map_suffix, sub_dir_1,
-                         sub_dir_2, ann_dir, split):
+    def load_infos(self, img_dir, img_suffix, seg_map_suffix, sub_dir_1, ann_dir, split):
         """Load annotation from directory.
         Args:
             img_dir (str): Path to image directory
@@ -120,8 +116,7 @@ class CustomDataset(Dataset):
                 for line in f:
                     img_name = line.strip()
                     img_info = dict(filename=img_name)
-                    img_info['img'] = dict(img1_path=osp.join(img_dir, sub_dir_1, img_name),
-                                           img2_path=osp.join(img_dir, sub_dir_2, img_name))
+                    img_info['img'] = dict(img1_path=osp.join(img_dir, sub_dir_1, img_name))
                     if ann_dir is not None:
                         seg_map_path = osp.join(ann_dir,
                                            img_name.replace(img_suffix, seg_map_suffix))
@@ -131,8 +126,7 @@ class CustomDataset(Dataset):
             for img in glob.glob(osp.join(img_dir, sub_dir_1, '*'+img_suffix)):
                 img_name = osp.basename(img)
                 img_info = dict(filename=img_name)
-                img_info['img'] = dict(img1_path=osp.join(img_dir, sub_dir_1, img_name),
-                                       img2_path=osp.join(img_dir, sub_dir_2, img_name))
+                img_info['img'] = dict(img1_path=osp.join(img_dir, sub_dir_1, img_name))
                 if ann_dir is not None:
                     seg_map_path = osp.join(ann_dir,
                                             img_name.replace(img_suffix, seg_map_suffix))
@@ -175,8 +169,7 @@ class CustomDataset(Dataset):
         """
 
         img1 = cv2.cvtColor(cv2.imread(img_info['img']['img1_path']), cv2.COLOR_BGR2RGB)
-        img2 = cv2.cvtColor(cv2.imread(img_info['img']['img2_path']), cv2.COLOR_BGR2RGB)
-        return img1, img2
+        return img1
 
     def get_gt_seg_maps(self, img_info, vis=False):
         """Open and read the ground truth.
@@ -201,8 +194,8 @@ class CustomDataset(Dataset):
         """
 
         img_info = self.img_infos[idx]
-        img1, img2 = self.get_image(img_info)
-        return img1, img2, img_info['filename']
+        img1 = self.get_image(img_info)
+        return img1, img_info['filename']
 
     def prepare_img_ann(self, idx):
         """Get image and annotations after pipeline.
@@ -214,9 +207,9 @@ class CustomDataset(Dataset):
         """
 
         img_info = self.img_infos[idx]
-        img1, img2 = self.get_image(img_info)
+        img1 = self.get_image(img_info)
         ann = self.get_gt_seg_maps(img_info, self.debug)
-        return img1, img2, ann, img_info['filename']
+        return img1, ann, img_info['filename']
 
     def format_results(self, results, **kwargs):
         """Place holder to format result to datasets specific output."""
