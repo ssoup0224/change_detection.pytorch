@@ -8,16 +8,16 @@ class Decoder(torch.nn.Module):
         self.FUSION_DIC = {"2to1_fusion": ["sum", "diff", "abs_diff"],
                            "2to2_fusion": ["concat"]}
 
-    def fusion(self, x1, x2, fusion_form="concat"):
+    def fusion(self, x1, fusion_form="concat"):
         """Specify the form of feature fusion"""
         if fusion_form == "concat":
-            x = torch.cat([x1, x2], dim=1)
+            x = torch.cat([x1], dim=1)
         elif fusion_form == "sum":
-            x = x1 + x2
+            x = x1 
         elif fusion_form == "diff":
-            x = x2 - x1
+            x = x2 
         elif fusion_form == "abs_diff":
-            x = torch.abs(x1 - x2)
+            x = torch.abs(x1)
         else:
             raise ValueError('the fusion form "{}" is not defined'.format(fusion_form))
 
